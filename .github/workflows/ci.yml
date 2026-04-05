@@ -28,8 +28,8 @@ jobs:
       - name: Lint
         run: ruff check src/ tests/
 
-      - name: Run tests
-        run: pytest -v
+      - name: Run unit tests
+        run: pytest tests/test_types.py tests/test_daemon_client.py -v
 
   build:
     runs-on: ubuntu-latest

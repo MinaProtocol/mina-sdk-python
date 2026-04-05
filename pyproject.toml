@@ -57,3 +57,6 @@ select = ["E", "F", "I", "W"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "integration: requires a running Mina daemon (set MINA_GRAPHQL_URI)",
+]
