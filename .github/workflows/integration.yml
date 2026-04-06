@@ -1,0 +1,66 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      mina:
+        image: o1labs/mina-local-network:compatible-latest-lightnet
+        env:
+          NETWORK_TYPE: single-node
+          PROOF_LEVEL: none
+          LOG_LEVEL: Info
+          RUN_ARCHIVE_NODE: false
+          SLOT_TIME: 20000
+        ports:
+          - 8080:8080
+          - 8181:8181
+          - 3085:3085
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install SDK
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Wait for Mina network
+        uses: o1-labs/wait-for-mina-network-action@v1
+        with:
+          mina-graphql-port: "8080"
+          max-attempts: "60"
+          polling-interval-ms: "10000"
+
+      - name: Acquire test accounts
+        id: accounts
+        run: |
+          SENDER=$(curl -s http://127.0.0.1:8181/acquire-account?unlockAccount=true)
+          RECEIVER=$(curl -s http://127.0.0.1:8181/acquire-account)
+          SENDER_PK=$(echo "$SENDER" | python -c "import sys,json; print(json.load(sys.stdin)['pk'])")
+          RECEIVER_PK=$(echo "$RECEIVER" | python -c "import sys,json; print(json.load(sys.stdin)['pk'])")
+          echo "sender_pk=$SENDER_PK" >> "$GITHUB_OUTPUT"
+          echo "receiver_pk=$RECEIVER_PK" >> "$GITHUB_OUTPUT"
+          echo "Sender: $SENDER_PK"
+          echo "Receiver: $RECEIVER_PK"
+
+      - name: Run integration tests
+        env:
+          MINA_GRAPHQL_URI: http://127.0.0.1:8080/graphql
+          MINA_TEST_SENDER_KEY: ${{ steps.accounts.outputs.sender_pk }}
+          MINA_TEST_RECEIVER_KEY: ${{ steps.accounts.outputs.receiver_pk }}
+        run: pytest tests/test_integration.py -v --tb=long
