@@ -1,0 +1,72 @@
+name: Schema Drift Check
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Weekly on Monday at 06:00 UTC
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/mina_sdk/schema/**"
+
+jobs:
+  schema-drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - branch: master
+            image_tag: master-latest-lightnet
+            strict: true
+          - branch: compatible
+            image_tag: compatible-latest-lightnet
+            strict: false
+          - branch: develop
+            image_tag: develop-latest-lightnet
+            strict: false
+
+    name: "Drift check: ${{ matrix.branch }}"
+
+    services:
+      mina:
+        image: o1labs/mina-local-network:${{ matrix.image_tag }}
+        env:
+          NETWORK_TYPE: single-node
+          PROOF_LEVEL: none
+          LOG_LEVEL: Info
+          RUN_ARCHIVE_NODE: false
+        ports:
+          - 8080:8080
+          - 3085:3085
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install httpx
+
+      - name: Wait for Mina network
+        uses: o1-labs/wait-for-mina-network-action@v1
+        with:
+          mina-graphql-port: "8080"
+          max-attempts: "60"
+          polling-interval-ms: "10000"
+
+      - name: Check schema drift
+        id: drift
+        run: |
+          python scripts/check_schema_drift.py \
+            --endpoint http://127.0.0.1:8080/graphql \
+            --branch ${{ matrix.branch }} \
+            ${{ matrix.strict && '--strict' || '' }}
+
+      - name: Annotate warnings for non-strict branches
+        if: ${{ !matrix.strict && failure() }}
+        run: |
+          echo "::warning::Schema drift detected against ${{ matrix.branch }} branch (non-blocking)"
