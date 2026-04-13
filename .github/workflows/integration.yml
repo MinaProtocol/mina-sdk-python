@@ -10,7 +10,7 @@ on:
 jobs:
   integration:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     services:
       mina:
@@ -54,8 +54,8 @@ jobs:
           acquire_account() {
             local url="$1"
             local label="$2"
-            for i in $(seq 1 30); do
-              RESP=$(curl -sf "$url" 2>/dev/null || echo "")
+            for i in $(seq 1 60); do
+              RESP=$(curl -s "$url" 2>&1 || echo "")
               if [ -n "$RESP" ]; then
                 PK=$(echo "$RESP" | python -c "import sys,json; d=json.load(sys.stdin); print(d.get('pk',''))" 2>/dev/null)
                 if [ -n "$PK" ]; then
@@ -63,10 +63,10 @@ jobs:
                   return 0
                 fi
               fi
-              echo "Attempt $i/30: $label not ready yet (response: $RESP)" >&2
+              echo "Attempt $i/60: $label not ready yet (response: $RESP)" >&2
               sleep 5
             done
-            echo "Failed to acquire $label after 30 attempts" >&2
+            echo "Failed to acquire $label after 60 attempts" >&2
             return 1
           }
 
