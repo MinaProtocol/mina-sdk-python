@@ -1,7 +1,54 @@
-"""Mina Protocol Python SDK."""
+"""Mina Protocol Python SDK.
 
-from mina_sdk.daemon.client import MinaDaemonClient
-from mina_sdk.types import Currency, CurrencyFormat
+Provides a typed client for the Mina daemon's GraphQL API with
+currency arithmetic, automatic retries, and context manager support.
 
-__all__ = ["MinaDaemonClient", "Currency", "CurrencyFormat"]
+Quick start::
+
+    from mina_sdk import MinaDaemonClient, Currency
+
+    with MinaDaemonClient() as client:
+        status = client.get_sync_status()
+        account = client.get_account("B62q...")
+        print(f"Balance: {account.balance.total} MINA")
+"""
+
+from mina_sdk.daemon.client import (
+    DaemonConnectionError,
+    GraphQLError,
+    MinaDaemonClient,
+)
+from mina_sdk.types import (
+    AccountBalance,
+    AccountData,
+    BlockInfo,
+    Currency,
+    CurrencyFormat,
+    CurrencyUnderflow,
+    DaemonStatus,
+    PeerInfo,
+    SendDelegationResult,
+    SendPaymentResult,
+)
+
+__all__ = [
+    # Client
+    "MinaDaemonClient",
+    # Exceptions
+    "GraphQLError",
+    "DaemonConnectionError",
+    "CurrencyUnderflow",
+    # Currency
+    "Currency",
+    "CurrencyFormat",
+    # Data types
+    "AccountBalance",
+    "AccountData",
+    "BlockInfo",
+    "DaemonStatus",
+    "PeerInfo",
+    "SendPaymentResult",
+    "SendDelegationResult",
+]
+
 __version__ = "0.1.0"

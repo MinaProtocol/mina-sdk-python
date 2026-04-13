@@ -25,7 +25,12 @@ logger = logging.getLogger(__name__)
 
 
 class GraphQLError(Exception):
-    """Raised when the GraphQL endpoint returns an error response."""
+    """Raised when the GraphQL endpoint returns an error response.
+
+    Attributes:
+        errors: List of error objects from the GraphQL response.
+        query_name: Name of the query/mutation that failed.
+    """
 
     def __init__(self, errors: list[dict[str, Any]], query_name: str = ""):
         self.errors = errors
@@ -34,10 +39,18 @@ class GraphQLError(Exception):
         super().__init__(f"GraphQL error in {query_name}: {'; '.join(messages)}")
 
 
-class ConnectionError(Exception):
-    """Raised when the client cannot connect to the daemon."""
+class DaemonConnectionError(Exception):
+    """Raised when the client cannot connect to the daemon after exhausting retries.
+
+    This replaces the previous ``ConnectionError`` name which shadowed the
+    built-in ``builtins.ConnectionError``.
+    """
 
     pass
+
+
+# Keep the old name as an alias for backwards compatibility
+ConnectionError = DaemonConnectionError  # noqa: A001
 
 
 class MinaDaemonClient:
@@ -45,9 +58,18 @@ class MinaDaemonClient:
 
     Args:
         graphql_uri: The daemon's GraphQL endpoint URL.
-        retries: Number of retry attempts for failed requests.
-        retry_delay: Seconds to wait between retries.
-        timeout: HTTP request timeout in seconds.
+        retries: Number of retry attempts for failed requests (must be >= 1).
+        retry_delay: Seconds to wait between retries (must be > 0).
+        timeout: HTTP request timeout in seconds (must be > 0).
+
+    Raises:
+        ValueError: If any configuration parameter is out of valid range.
+
+    Example::
+
+        with MinaDaemonClient() as client:
+            status = client.get_sync_status()
+            print(status)
     """
 
     def __init__(
@@ -57,12 +79,22 @@ class MinaDaemonClient:
         retry_delay: float = 5.0,
         timeout: float = 30.0,
     ):
+        if not graphql_uri:
+            raise ValueError("graphql_uri must not be empty")
+        if retries < 1:
+            raise ValueError(f"retries must be >= 1, got {retries}")
+        if retry_delay < 0:
+            raise ValueError(f"retry_delay must be >= 0, got {retry_delay}")
+        if timeout <= 0:
+            raise ValueError(f"timeout must be > 0, got {timeout}")
+
         self._uri = graphql_uri
         self._retries = retries
         self._retry_delay = retry_delay
         self._client = httpx.Client(timeout=timeout)
 
     def close(self) -> None:
+        """Release resources held by the HTTP client."""
         self._client.close()
 
     def __enter__(self) -> MinaDaemonClient:
@@ -76,7 +108,11 @@ class MinaDaemonClient:
     ) -> dict[str, Any]:
         """Execute a GraphQL request with retry logic.
 
-        Returns the 'data' field of the response.
+        Returns the ``data`` field of the response.
+
+        Raises:
+            GraphQLError: If the response contains GraphQL-level errors (not retried).
+            DaemonConnectionError: If all retry attempts fail due to network errors.
         """
         payload: dict[str, Any] = {"query": query}
         if variables:
@@ -87,12 +123,18 @@ class MinaDaemonClient:
             try:
                 logger.debug("GraphQL %s attempt %d/%d", query_name, attempt, self._retries)
                 resp = self._client.post(self._uri, json=payload)
-                resp_json = resp.json()
+                resp.raise_for_status()
+
+                try:
+                    resp_json = resp.json()
+                except ValueError as e:
+                    raise DaemonConnectionError(
+                        f"Invalid JSON response from {query_name}: {e}"
+                    ) from e
 
                 if "errors" in resp_json:
                     raise GraphQLError(resp_json["errors"], query_name)
 
-                resp.raise_for_status()
                 return resp_json.get("data", {})
 
             except GraphQLError:
@@ -119,7 +161,7 @@ class MinaDaemonClient:
             if attempt < self._retries:
                 time.sleep(self._retry_delay)
 
-        raise ConnectionError(
+        raise DaemonConnectionError(
             f"Failed to execute {query_name} after {self._retries} attempts: {last_error}"
         )
 
@@ -128,13 +170,16 @@ class MinaDaemonClient:
     def get_sync_status(self) -> str:
         """Get the node's sync status.
 
-        Returns one of: CONNECTING, LISTENING, OFFLINE, BOOTSTRAP, SYNCED, CATCHUP.
+        Returns:
+            One of: ``CONNECTING``, ``LISTENING``, ``OFFLINE``, ``BOOTSTRAP``,
+            ``SYNCED``, ``CATCHUP``.
         """
         data = self._request(queries.SYNC_STATUS, query_name="get_sync_status")
         return data["syncStatus"]
 
     def get_daemon_status(self) -> DaemonStatus:
-        """Get comprehensive daemon status."""
+        """Get comprehensive daemon status including sync state, chain height,
+        uptime, commit hash, and connected peers."""
         data = self._request(queries.DAEMON_STATUS, query_name="get_daemon_status")
         status = data["daemonStatus"]
 
@@ -160,7 +205,7 @@ class MinaDaemonClient:
         )
 
     def get_network_id(self) -> str:
-        """Get the network identifier."""
+        """Get the network identifier (e.g. ``mina:mainnet``, ``mina:testnet``)."""
         data = self._request(queries.NETWORK_ID, query_name="get_network_id")
         return data["networkID"]
 
@@ -170,8 +215,11 @@ class MinaDaemonClient:
         """Get account data for a public key.
 
         Args:
-            public_key: Base58-encoded public key.
+            public_key: Base58-encoded public key (starts with ``B62q``).
             token_id: Optional token ID (defaults to MINA token).
+
+        Raises:
+            ValueError: If the account does not exist on the ledger.
         """
         variables: dict[str, Any] = {"publicKey": public_key}
         if token_id is not None:
@@ -196,10 +244,11 @@ class MinaDaemonClient:
         )
 
     def get_best_chain(self, max_length: int | None = None) -> list[BlockInfo]:
-        """Get blocks from the best chain.
+        """Get blocks from the best chain, ordered from highest to lowest.
 
         Args:
-            max_length: Maximum number of blocks to return.
+            max_length: Maximum number of blocks to return.  ``None`` uses the
+                daemon's default.
         """
         variables: dict[str, Any] = {}
         if max_length is not None:
@@ -245,6 +294,11 @@ class MinaDaemonClient:
 
         Args:
             public_key: Optional filter by sender public key.
+
+        Returns:
+            Raw list of transaction dictionaries from the mempool.  Each dict
+            contains keys: ``id``, ``hash``, ``kind``, ``nonce``, ``amount``,
+            ``fee``, ``from``, ``to``.
         """
         variables: dict[str, Any] = {}
         if public_key is not None:
@@ -275,10 +329,13 @@ class MinaDaemonClient:
         Args:
             sender: Sender public key (base58).
             receiver: Receiver public key (base58).
-            amount: Amount to send (Currency or MINA string like "1.5").
-            fee: Transaction fee (Currency or MINA string).
-            memo: Optional transaction memo.
-            nonce: Optional explicit nonce.
+            amount: Amount to send (``Currency`` or MINA string like ``"1.5"``).
+            fee: Transaction fee (``Currency`` or MINA string).
+            memo: Optional transaction memo (max 32 bytes).
+            nonce: Optional explicit nonce.  If omitted the daemon auto-increments.
+
+        Raises:
+            GraphQLError: If the daemon rejects the transaction.
         """
         if isinstance(amount, str):
             amount = Currency(amount)
@@ -321,7 +378,7 @@ class MinaDaemonClient:
         Args:
             sender: Delegator public key (base58).
             delegate_to: Delegate-to public key (base58).
-            fee: Transaction fee (Currency or MINA string).
+            fee: Transaction fee (``Currency`` or MINA string).
             memo: Optional transaction memo.
             nonce: Optional explicit nonce.
         """
@@ -352,10 +409,10 @@ class MinaDaemonClient:
         """Set or unset the SNARK worker key.
 
         Args:
-            public_key: Public key for snark worker, or None to disable.
+            public_key: Public key for snark worker, or ``None`` to disable.
 
         Returns:
-            The previous snark worker public key, or None.
+            The previous snark worker public key, or ``None`` if there was none.
         """
         data = self._request(
             queries.SET_SNARK_WORKER,
@@ -368,10 +425,10 @@ class MinaDaemonClient:
         """Set the fee for SNARK work.
 
         Args:
-            fee: The fee amount (Currency or MINA string).
+            fee: The fee amount (``Currency`` or MINA string).
 
         Returns:
-            The previous fee as a string.
+            The previous fee as a nanomina string.
         """
         if isinstance(fee, str):
             fee = Currency(fee)
