@@ -24,6 +24,7 @@ jobs:
         ports:
           - 8080:8080
           - 8181:8181
+          - 8282:8282
           - 3085:3085
 
     steps:
@@ -68,6 +69,10 @@ jobs:
             echo "Failed to acquire $label after 30 attempts" >&2
             return 1
           }
+
+          # Debug: check which ports are responding
+          echo "Checking port 8181..." && curl -sf http://127.0.0.1:8181/ 2>&1 | head -1 || echo "8181 not responding"
+          echo "Checking port 8282..." && curl -sf http://127.0.0.1:8282/ 2>&1 | head -1 || echo "8282 not responding"
 
           SENDER_PK=$(acquire_account "http://127.0.0.1:8181/acquire-account?unlockAccount=true" "sender")
           RECEIVER_PK=$(acquire_account "http://127.0.0.1:8181/acquire-account" "receiver")
