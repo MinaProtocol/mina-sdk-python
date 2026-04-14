@@ -32,23 +32,19 @@ from mina_sdk.types import (
 )
 
 __all__ = [
-    # Client
-    "MinaDaemonClient",
-    # Exceptions
-    "GraphQLError",
-    "DaemonConnectionError",
-    "CurrencyUnderflow",
-    # Currency
-    "Currency",
-    "CurrencyFormat",
-    # Data types
     "AccountBalance",
     "AccountData",
     "BlockInfo",
+    "Currency",
+    "CurrencyFormat",
+    "CurrencyUnderflow",
+    "DaemonConnectionError",
     "DaemonStatus",
+    "GraphQLError",
+    "MinaDaemonClient",
     "PeerInfo",
-    "SendPaymentResult",
     "SendDelegationResult",
+    "SendPaymentResult",
 ]
 
 __version__ = "0.1.0"

@@ -50,7 +50,7 @@ class DaemonConnectionError(Exception):
 
 
 # Keep the old name as an alias for backwards compatibility
-ConnectionError = DaemonConnectionError  # noqa: A001
+ConnectionError = DaemonConnectionError
 
 
 class MinaDaemonClient:
@@ -209,9 +209,7 @@ class MinaDaemonClient:
         data = self._request(queries.NETWORK_ID, query_name="get_network_id")
         return data["networkID"]
 
-    def get_account(
-        self, public_key: str, token_id: str | None = None
-    ) -> AccountData:
+    def get_account(self, public_key: str, token_id: str | None = None) -> AccountData:
         """Get account data for a public key.
 
         Args:
@@ -228,9 +226,7 @@ class MinaDaemonClient:
             )
         else:
             variables = {"publicKey": public_key}
-            data = self._request(
-                queries.GET_ACCOUNT, variables=variables, query_name="get_account"
-            )
+            data = self._request(queries.GET_ACCOUNT, variables=variables, query_name="get_account")
         acc = data.get("account")
         if acc is None:
             raise ValueError(f"account not found: {public_key}")
