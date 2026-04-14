@@ -77,6 +77,7 @@ ignore = [
     "A001",  # ConnectionError shadows builtin (fixed in quality PR)
     "A004",  # ConnectionError import shadows builtin (fixed in quality PR)
     "N818",  # CurrencyUnderflow naming (fixed in quality PR)
+    "S105",  # false positive on "TOKEN" in query variable names
     "S311",  # random.randint not crypto-safe (Currency.random is not for crypto)
 ]
 
@@ -118,4 +119,7 @@ exclude_lines = [
 
 [tool.bandit]
 exclude_dirs = ["tests"]
-skips = ["B311"]  # random.randint is fine for Currency.random (not crypto)
+skips = [
+    "B105",  # false positive: "TOKEN" in GraphQL query variable names
+    "B311",  # random.randint is fine for Currency.random (not crypto)
+]

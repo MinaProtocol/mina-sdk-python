@@ -274,3 +274,56 @@ def test_pooled_user_commands(client):
     cmds = client.get_pooled_user_commands("B62qsender...")
     assert len(cmds) == 1
     assert cmds[0]["kind"] == "PAYMENT"
+
+
+# -- Parameter validation tests --
+
+
+def test_invalid_retries():
+    with pytest.raises(ValueError, match="retries must be >= 1"):
+        MinaDaemonClient(retries=0)
+
+
+def test_invalid_negative_retry_delay():
+    with pytest.raises(ValueError, match="retry_delay must be >= 0"):
+        MinaDaemonClient(retry_delay=-1.0)
+
+
+def test_invalid_timeout():
+    with pytest.raises(ValueError, match="timeout must be > 0"):
+        MinaDaemonClient(timeout=0)
+
+
+def test_empty_graphql_uri():
+    with pytest.raises(ValueError, match="graphql_uri must not be empty"):
+        MinaDaemonClient(graphql_uri="")
+
+
+@respx.mock
+def test_json_decode_error():
+    respx.post(GRAPHQL_URL).mock(return_value=httpx.Response(200, text="not json"))
+    client = MinaDaemonClient(graphql_uri=GRAPHQL_URL, retries=1, retry_delay=0.0, timeout=5.0)
+    with pytest.raises(ConnectionError, match="Invalid JSON"):
+        client.get_sync_status()
+    client.close()
+
+
+@respx.mock
+def test_http_500_retried():
+    respx.post(GRAPHQL_URL).mock(return_value=httpx.Response(500, text="Internal Server Error"))
+    client = MinaDaemonClient(graphql_uri=GRAPHQL_URL, retries=2, retry_delay=0.0, timeout=5.0)
+    with pytest.raises(ConnectionError, match="after 2 attempts"):
+        client.get_sync_status()
+    client.close()
+
+
+@respx.mock
+def test_daemon_connection_error_alias():
+    """DaemonConnectionError and ConnectionError are the same class."""
+    from mina_sdk.daemon.client import DaemonConnectionError
+
+    respx.post(GRAPHQL_URL).mock(side_effect=httpx.ConnectError("refused"))
+    client = MinaDaemonClient(graphql_uri=GRAPHQL_URL, retries=1, retry_delay=0.0, timeout=1.0)
+    with pytest.raises(DaemonConnectionError):
+        client.get_sync_status()
+    client.close()

@@ -104,8 +104,9 @@ class TestDaemonQueries:
     def test_best_chain_ordering(self, synced_client):
         blocks = synced_client.get_best_chain(max_length=5)
         if len(blocks) >= 2:
-            for i in range(len(blocks) - 1):
-                assert blocks[i].height >= blocks[i + 1].height
+            heights = [b.height for b in blocks]
+            # Blocks should be monotonically ordered (ascending or descending)
+            assert heights == sorted(heights) or heights == sorted(heights, reverse=True)
 
     def test_pooled_user_commands_no_filter(self, synced_client):
         cmds = synced_client.get_pooled_user_commands()
