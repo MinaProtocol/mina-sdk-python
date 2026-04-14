@@ -1,5 +1,11 @@
 # Mina Python SDK
 
+[![CI](https://github.com/MinaProtocol/mina-sdk-python/actions/workflows/ci.yml/badge.svg)](https://github.com/MinaProtocol/mina-sdk-python/actions/workflows/ci.yml)
+[![Integration Tests](https://github.com/MinaProtocol/mina-sdk-python/actions/workflows/integration.yml/badge.svg)](https://github.com/MinaProtocol/mina-sdk-python/actions/workflows/integration.yml)
+[![PyPI version](https://img.shields.io/pypi/v/mina-sdk.svg)](https://pypi.org/project/mina-sdk/)
+[![Python](https://img.shields.io/pypi/pyversions/mina-sdk.svg)](https://pypi.org/project/mina-sdk/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 Python SDK for interacting with [Mina Protocol](https://minaprotocol.com) nodes.
 
 ## Features
