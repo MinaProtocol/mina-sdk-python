@@ -221,11 +221,16 @@ class MinaDaemonClient:
         Raises:
             ValueError: If the account does not exist on the ledger.
         """
-        variables: dict[str, Any] = {"publicKey": public_key}
         if token_id is not None:
-            variables["token"] = token_id
-
-        data = self._request(queries.GET_ACCOUNT, variables=variables, query_name="get_account")
+            variables: dict[str, Any] = {"publicKey": public_key, "token": token_id}
+            data = self._request(
+                queries.GET_ACCOUNT_WITH_TOKEN, variables=variables, query_name="get_account"
+            )
+        else:
+            variables = {"publicKey": public_key}
+            data = self._request(
+                queries.GET_ACCOUNT, variables=variables, query_name="get_account"
+            )
         acc = data.get("account")
         if acc is None:
             raise ValueError(f"account not found: {public_key}")
