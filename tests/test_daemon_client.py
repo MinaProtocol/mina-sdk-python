@@ -41,19 +41,21 @@ def test_sync_status_bootstrap(client):
 
 @respx.mock
 def test_daemon_status(client):
-    respx.post(GRAPHQL_URL).mock(return_value=_gql_response({
-        "daemonStatus": {
-            "syncStatus": "SYNCED",
-            "blockchainLength": 100,
-            "highestBlockLengthReceived": 100,
-            "uptimeSecs": 3600,
-            "stateHash": "3NKtest...",
-            "commitId": "abc123",
-            "peers": [
-                {"peerId": "peer1", "host": "1.2.3.4", "libp2pPort": 8302}
-            ],
-        }
-    }))
+    respx.post(GRAPHQL_URL).mock(
+        return_value=_gql_response(
+            {
+                "daemonStatus": {
+                    "syncStatus": "SYNCED",
+                    "blockchainLength": 100,
+                    "highestBlockLengthReceived": 100,
+                    "uptimeSecs": 3600,
+                    "stateHash": "3NKtest...",
+                    "commitId": "abc123",
+                    "peers": [{"peerId": "peer1", "host": "1.2.3.4", "libp2pPort": 8302}],
+                }
+            }
+        )
+    )
     status = client.get_daemon_status()
     assert status.sync_status == "SYNCED"
     assert status.blockchain_length == 100
@@ -72,19 +74,23 @@ def test_network_id(client):
 
 @respx.mock
 def test_get_account(client):
-    respx.post(GRAPHQL_URL).mock(return_value=_gql_response({
-        "account": {
-            "publicKey": "B62qtest...",
-            "nonce": "5",
-            "delegate": "B62qdelegate...",
-            "tokenId": "1",
-            "balance": {
-                "total": "1500000000000",
-                "liquid": "1000000000000",
-                "locked": "500000000000",
-            },
-        }
-    }))
+    respx.post(GRAPHQL_URL).mock(
+        return_value=_gql_response(
+            {
+                "account": {
+                    "publicKey": "B62qtest...",
+                    "nonce": "5",
+                    "delegate": "B62qdelegate...",
+                    "tokenId": "1",
+                    "balance": {
+                        "total": "1500000000000",
+                        "liquid": "1000000000000",
+                        "locked": "500000000000",
+                    },
+                }
+            }
+        )
+    )
     account = client.get_account("B62qtest...")
     assert account.public_key == "B62qtest..."
     assert account.nonce == 5
@@ -103,22 +109,26 @@ def test_get_account_not_found(client):
 
 @respx.mock
 def test_best_chain(client):
-    respx.post(GRAPHQL_URL).mock(return_value=_gql_response({
-        "bestChain": [
+    respx.post(GRAPHQL_URL).mock(
+        return_value=_gql_response(
             {
-                "stateHash": "3NKhash1",
-                "commandTransactionCount": 3,
-                "creatorAccount": {"publicKey": "B62qcreator..."},
-                "protocolState": {
-                    "consensusState": {
-                        "blockHeight": "50",
-                        "slotSinceGenesis": "1000",
-                        "slot": "500",
+                "bestChain": [
+                    {
+                        "stateHash": "3NKhash1",
+                        "commandTransactionCount": 3,
+                        "creatorAccount": {"publicKey": "B62qcreator..."},
+                        "protocolState": {
+                            "consensusState": {
+                                "blockHeight": "50",
+                                "slotSinceGenesis": "1000",
+                                "slot": "500",
+                            }
+                        },
                     }
-                },
+                ]
             }
-        ]
-    }))
+        )
+    )
     blocks = client.get_best_chain(max_length=1)
     assert len(blocks) == 1
     assert blocks[0].state_hash == "3NKhash1"
@@ -135,15 +145,19 @@ def test_best_chain_empty(client):
 
 @respx.mock
 def test_send_payment(client):
-    respx.post(GRAPHQL_URL).mock(return_value=_gql_response({
-        "sendPayment": {
-            "payment": {
-                "id": "txn-id-123",
-                "hash": "CkpHash...",
-                "nonce": "6",
+    respx.post(GRAPHQL_URL).mock(
+        return_value=_gql_response(
+            {
+                "sendPayment": {
+                    "payment": {
+                        "id": "txn-id-123",
+                        "hash": "CkpHash...",
+                        "nonce": "6",
+                    }
+                }
             }
-        }
-    }))
+        )
+    )
     result = client.send_payment(
         sender="B62qsender...",
         receiver="B62qreceiver...",
@@ -157,11 +171,11 @@ def test_send_payment(client):
 
 @respx.mock
 def test_send_payment_string_amounts(client):
-    respx.post(GRAPHQL_URL).mock(return_value=_gql_response({
-        "sendPayment": {
-            "payment": {"id": "x", "hash": "y", "nonce": "1"}
-        }
-    }))
+    respx.post(GRAPHQL_URL).mock(
+        return_value=_gql_response(
+            {"sendPayment": {"payment": {"id": "x", "hash": "y", "nonce": "1"}}}
+        )
+    )
     result = client.send_payment(
         sender="B62qsender...",
         receiver="B62qreceiver...",
@@ -173,15 +187,19 @@ def test_send_payment_string_amounts(client):
 
 @respx.mock
 def test_send_delegation(client):
-    respx.post(GRAPHQL_URL).mock(return_value=_gql_response({
-        "sendDelegation": {
-            "delegation": {
-                "id": "del-id-456",
-                "hash": "CkpDel...",
-                "nonce": "7",
+    respx.post(GRAPHQL_URL).mock(
+        return_value=_gql_response(
+            {
+                "sendDelegation": {
+                    "delegation": {
+                        "id": "del-id-456",
+                        "hash": "CkpDel...",
+                        "nonce": "7",
+                    }
+                }
             }
-        }
-    }))
+        )
+    )
     result = client.send_delegation(
         sender="B62qsender...",
         delegate_to="B62qdelegate...",
@@ -202,9 +220,7 @@ def test_graphql_error(client):
 @respx.mock
 def test_connection_error_after_retries():
     respx.post(GRAPHQL_URL).mock(side_effect=httpx.ConnectError("refused"))
-    client = MinaDaemonClient(
-        graphql_uri=GRAPHQL_URL, retries=2, retry_delay=0.0, timeout=1.0
-    )
+    client = MinaDaemonClient(graphql_uri=GRAPHQL_URL, retries=2, retry_delay=0.0, timeout=1.0)
     with pytest.raises(ConnectionError, match="after 2 attempts"):
         client.get_sync_status()
     client.close()
@@ -219,12 +235,16 @@ def test_context_manager():
 
 @respx.mock
 def test_get_peers(client):
-    respx.post(GRAPHQL_URL).mock(return_value=_gql_response({
-        "getPeers": [
-            {"peerId": "p1", "host": "10.0.0.1", "libp2pPort": 8302},
-            {"peerId": "p2", "host": "10.0.0.2", "libp2pPort": 8302},
-        ]
-    }))
+    respx.post(GRAPHQL_URL).mock(
+        return_value=_gql_response(
+            {
+                "getPeers": [
+                    {"peerId": "p1", "host": "10.0.0.1", "libp2pPort": 8302},
+                    {"peerId": "p2", "host": "10.0.0.2", "libp2pPort": 8302},
+                ]
+            }
+        )
+    )
     peers = client.get_peers()
     assert len(peers) == 2
     assert peers[0].peer_id == "p1"
@@ -233,20 +253,24 @@ def test_get_peers(client):
 
 @respx.mock
 def test_pooled_user_commands(client):
-    respx.post(GRAPHQL_URL).mock(return_value=_gql_response({
-        "pooledUserCommands": [
+    respx.post(GRAPHQL_URL).mock(
+        return_value=_gql_response(
             {
-                "id": "cmd1",
-                "hash": "CkpHash1",
-                "kind": "PAYMENT",
-                "nonce": "1",
-                "amount": "1000000000",
-                "fee": "10000000",
-                "from": "B62qsender...",
-                "to": "B62qreceiver...",
+                "pooledUserCommands": [
+                    {
+                        "id": "cmd1",
+                        "hash": "CkpHash1",
+                        "kind": "PAYMENT",
+                        "nonce": "1",
+                        "amount": "1000000000",
+                        "fee": "10000000",
+                        "from": "B62qsender...",
+                        "to": "B62qreceiver...",
+                    }
+                ]
             }
-        ]
-    }))
+        )
+    )
     cmds = client.get_pooled_user_commands("B62qsender...")
     assert len(cmds) == 1
     assert cmds[0]["kind"] == "PAYMENT"

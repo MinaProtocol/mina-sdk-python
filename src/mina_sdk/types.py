@@ -140,9 +140,7 @@ class Currency:
         if isinstance(other, Currency):
             result = self._nanomina - other._nanomina
             if result < 0:
-                raise CurrencyUnderflow(
-                    f"subtraction would result in negative: {self} - {other}"
-                )
+                raise CurrencyUnderflow(f"subtraction would result in negative: {self} - {other}")
             return Currency.from_nanomina(result)
         return NotImplemented
 

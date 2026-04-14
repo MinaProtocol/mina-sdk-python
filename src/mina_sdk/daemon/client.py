@@ -164,9 +164,7 @@ class MinaDaemonClient:
         data = self._request(queries.NETWORK_ID, query_name="get_network_id")
         return data["networkID"]
 
-    def get_account(
-        self, public_key: str, token_id: str | None = None
-    ) -> AccountData:
+    def get_account(self, public_key: str, token_id: str | None = None) -> AccountData:
         """Get account data for a public key.
 
         Args:

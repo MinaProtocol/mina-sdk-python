@@ -35,8 +35,12 @@ archive = ["asyncpg>=0.29"]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
     "respx>=0.20",
     "ruff>=0.8",
+    "mypy>=1.13",
+    "bandit>=1.8",
+    "pip-audit>=2.7",
 ]
 
 [project.urls]
@@ -50,9 +54,47 @@ packages = ["src/mina_sdk"]
 [tool.ruff]
 target-version = "py38"
 line-length = 100
+src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "W"]
+select = [
+    "E",     # pycodestyle errors
+    "F",     # pyflakes
+    "I",     # isort
+    "W",     # pycodestyle warnings
+    "N",     # pep8-naming
+    "UP",    # pyupgrade
+    "B",     # flake8-bugbear
+    "A",     # flake8-builtins
+    "S",     # flake8-bandit (security)
+    "T20",   # flake8-print
+    "SIM",   # flake8-simplify
+    "RUF",   # ruff-specific rules
+]
+ignore = [
+    "S101",  # allow assert in tests
+    "T201",  # allow print in examples
+    "A001",  # ConnectionError shadows builtin (fixed in quality PR)
+    "A004",  # ConnectionError import shadows builtin (fixed in quality PR)
+    "N818",  # CurrencyUnderflow naming (fixed in quality PR)
+    "S311",  # random.randint not crypto-safe (Currency.random is not for crypto)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "S106"]
+"examples/*" = ["T201"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = false
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -60,3 +102,20 @@ asyncio_mode = "auto"
 markers = [
     "integration: requires a running Mina daemon (set MINA_GRAPHQL_URI)",
 ]
+
+[tool.coverage.run]
+source = ["mina_sdk"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 70
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B311"]  # random.randint is fine for Currency.random (not crypto)

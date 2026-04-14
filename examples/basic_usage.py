@@ -1,6 +1,6 @@
 """Basic usage of the Mina Python SDK."""
 
-from mina_sdk import MinaDaemonClient, Currency
+from mina_sdk import Currency, MinaDaemonClient
 
 
 def main():
@@ -27,15 +27,17 @@ def main():
         # Get recent blocks
         blocks = client.get_best_chain(max_length=5)
         for block in blocks:
-            print(f"Block {block.height}: {block.state_hash[:20]}... "
-                  f"({block.command_transaction_count} txns)")
+            print(
+                f"Block {block.height}: {block.state_hash[:20]}... "
+                f"({block.command_transaction_count} txns)"
+            )
 
         # Send a payment (requires sender account unlocked on node)
         result = client.send_payment(
             sender="B62qsender...",
             receiver="B62qreceiver...",
-            amount=Currency("1.5"),   # 1.5 MINA
-            fee=Currency("0.01"),     # 0.01 MINA fee
+            amount=Currency("1.5"),  # 1.5 MINA
+            fee=Currency("0.01"),  # 0.01 MINA fee
             memo="hello from SDK",
         )
         print(f"Payment sent! Hash: {result.hash}, Nonce: {result.nonce}")
