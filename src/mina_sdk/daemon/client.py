@@ -293,22 +293,25 @@ class MinaDaemonClient:
         """Get pending user commands from the transaction pool.
 
         Args:
-            public_key: Optional filter by sender public key.
+            public_key: Filter by sender public key.  If ``None``, returns all
+                pending commands.
 
         Returns:
             Raw list of transaction dictionaries from the mempool.  Each dict
             contains keys: ``id``, ``hash``, ``kind``, ``nonce``, ``amount``,
             ``fee``, ``from``, ``to``.
         """
-        variables: dict[str, Any] = {}
         if public_key is not None:
-            variables["publicKey"] = public_key
-
-        data = self._request(
-            queries.POOLED_USER_COMMANDS,
-            variables=variables or None,
-            query_name="get_pooled_user_commands",
-        )
+            data = self._request(
+                queries.POOLED_USER_COMMANDS,
+                variables={"publicKey": public_key},
+                query_name="get_pooled_user_commands",
+            )
+        else:
+            data = self._request(
+                queries.POOLED_USER_COMMANDS_ALL,
+                query_name="get_pooled_user_commands",
+            )
         return data.get("pooledUserCommands", [])
 
     # -- Mutations --

@@ -76,8 +76,23 @@ query {
 """
 
 POOLED_USER_COMMANDS = """
-query ($publicKey: PublicKey) {
+query ($publicKey: PublicKey!) {
     pooledUserCommands(publicKey: $publicKey) {
+        id
+        hash
+        kind
+        nonce
+        amount
+        fee
+        from
+        to
+    }
+}
+"""
+
+POOLED_USER_COMMANDS_ALL = """
+query {
+    pooledUserCommands {
         id
         hash
         kind
