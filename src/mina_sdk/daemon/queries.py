@@ -31,7 +31,23 @@ query {
 """
 
 GET_ACCOUNT = """
-query ($publicKey: PublicKey!, $token: UInt64) {
+query ($publicKey: PublicKey!) {
+    account(publicKey: $publicKey) {
+        publicKey
+        nonce
+        delegate
+        tokenId
+        balance {
+            total
+            liquid
+            locked
+        }
+    }
+}
+"""
+
+GET_ACCOUNT_WITH_TOKEN = """
+query ($publicKey: PublicKey!, $token: UInt64!) {
     account(publicKey: $publicKey, token: $token) {
         publicKey
         nonce
@@ -76,8 +92,23 @@ query {
 """
 
 POOLED_USER_COMMANDS = """
-query ($publicKey: PublicKey) {
+query ($publicKey: PublicKey!) {
     pooledUserCommands(publicKey: $publicKey) {
+        id
+        hash
+        kind
+        nonce
+        amount
+        fee
+        from
+        to
+    }
+}
+"""
+
+POOLED_USER_COMMANDS_ALL = """
+query {
+    pooledUserCommands {
         id
         hash
         kind

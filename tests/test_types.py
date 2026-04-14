@@ -109,3 +109,21 @@ class TestCurrency:
     def test_small_nanomina_display(self):
         c = Currency.from_nanomina(1)
         assert c.mina == "0.000000001"
+
+    def test_negative_whole_rejected(self):
+        with pytest.raises(ValueError, match="non-negative"):
+            Currency(-10)
+
+    def test_negative_nano_rejected(self):
+        with pytest.raises(ValueError, match="non-negative"):
+            Currency(-1, fmt=CurrencyFormat.NANO)
+
+    def test_rmul(self):
+        c = Currency(2)
+        assert (3 * c).nanomina == 6_000_000_000
+
+    def test_mul_currency_by_currency_rejected(self):
+        a = Currency(2)
+        b = Currency(3)
+        result = a.__mul__(b)
+        assert result is NotImplemented
