@@ -47,7 +47,7 @@ query ($publicKey: PublicKey!) {
 """
 
 GET_ACCOUNT_WITH_TOKEN = """
-query ($publicKey: PublicKey!, $token: UInt64!) {
+query ($publicKey: PublicKey!, $token: TokenId!) {
     account(publicKey: $publicKey, token: $token) {
         publicKey
         nonce
